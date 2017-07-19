@@ -190,6 +190,10 @@ extern const CBLChangesOptions kDefaultCBLChangesOptions;
 
 - (CBL_Revision*) getParentRevision: (CBL_Revision*)rev;
 
+/** Checks whether DB already contains docs without doc_type column. 
+    In this case we should disable doc_type optimisation. */
+- (BOOL)hasDataWithoutFpType;
+
 /** Returns an array of CBL_Revisions in reverse chronological order,
     starting with the given revision. */
 - (NSArray*) getRevisionHistory: (CBL_Revision*)rev;

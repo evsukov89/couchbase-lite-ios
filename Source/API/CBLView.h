@@ -68,6 +68,10 @@ id CBLTextKey(NSString* text);
 - (BOOL) setMapBlock: (CBLMapBlock)mapBlock
              version: (NSString*)version                            __attribute__((nonnull(1,2)));
 
+- (void)setDocumentTypes:(NSArray<NSString *> *)docTypes;
+
+- (NSArray<NSString *> *)getDocumentTypes;
+
 /** Is the view's index currently out of date? */
 @property (readonly) BOOL stale;
 

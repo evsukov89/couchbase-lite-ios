@@ -116,6 +116,22 @@
 }
 
 
+- (void)setDocumentTypes:(NSArray<NSString *> *)docTypes {
+    if (!self.database.docTypes) {
+        self.database.docTypes = [NSMutableDictionary dictionary];
+    }
+    self.database.docTypes[self.name] = docTypes;
+}
+
+
+- (NSArray<NSString *> *)getDocumentTypes {
+    if (!self.database.docTypes) {
+        self.database.docTypes = [NSMutableDictionary dictionary];
+    }
+    return self.database.docTypes[self.name];
+}
+
+
 - (BOOL) stale {
     return self.lastSequenceIndexed < _weakDB.lastSequenceNumber;
 }

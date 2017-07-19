@@ -45,6 +45,13 @@ typedef BOOL (^CBLFilterBlock) (CBLSavedRevision* revision, NSDictionary* params
 /** The number of documents in the database. */
 @property (readonly) NSUInteger documentCount;
 
+/** Dictionary view name -> target_fp_types
+ Only those documents whose "fp_type" property is equal to one in target_fp_types will be
+ passed to the map block and indexed. This can speed up indexing.
+ Just like the map block, this property is not persistent; it needs to be set at runtime before
+ the view is queried. And if its value changes, the view's version also needs to change. */
+@property (nonatomic, strong) NSMutableDictionary<NSString *, NSArray<NSString *> *> *docTypes;
+
 /** The latest sequence number used.
     Every new revision is assigned a new sequence number, so this property increases monotonically
     as changes are made to the database. It can be used to check whether the database has changed

@@ -241,17 +241,19 @@
                           current: (BOOL)current
                    hasAttachments: (BOOL)hasAttachments
                              JSON: (NSData*)json
+                          docType: (NSString*)docType
 {
     if (![_fmdb executeUpdate: @"INSERT INTO revs (doc_id, revid, parent, current, deleted, "
-                                                  "no_attachments, json) "
-                                "VALUES (?, ?, ?, ?, ?, ?, ?)",
-                               @(docNumericID),
-                               rev.revID,
-                               (parentSequence ? @(parentSequence) : nil ),
-                               @(current),
-                               @(rev.deleted),
-                               @(!hasAttachments),
-                               json])
+          "no_attachments, json, doc_type) "
+          "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+          @(docNumericID),
+          rev.revID,
+          (parentSequence ? @(parentSequence) : nil ),
+          @(current),
+          @(rev.deleted),
+          @(!hasAttachments),
+          json,
+          docType])
         return 0;
     return rev.sequence = _fmdb.lastInsertRowId;
 }
@@ -403,6 +405,11 @@
         if (json == nil)
             json = [NSData data];
         
+        NSString *docType = @"";
+        if (oldRev && oldRev.properties && oldRev.properties[@"fp_type"]) {
+            docType = oldRev.properties[@"fp_type"];
+        }
+        
         //// PART III: In which the actual insertion finally takes place:
         
         SequenceNumber sequence = [self insertRevision: newRev
@@ -410,7 +417,8 @@
                                         parentSequence: parentSequence
                                                current: YES
                                         hasAttachments: (oldRev[@"_attachments"] != nil)
-                                                  JSON: json];
+                                                  JSON: json
+                                               docType:docType];
         if (!sequence) {
             // The insert failed. If it was due to a constraint violation, that means a revision
             // already exists with identical contents and the same parent rev. We can ignore this
@@ -424,7 +432,7 @@
         
         // Make replaced rev non-current:
         if (parentSequence > 0) {
-            if (![_fmdb executeUpdate: @"UPDATE revs SET current=0 WHERE sequence=?",
+            if (![_fmdb executeUpdate: @"UPDATE revs SET current=0, doc_type=null WHERE sequence=?",
                                        @(parentSequence)])
                 return self.lastDbError;
         }
@@ -540,6 +548,7 @@
 
                 CBL_MutableRevision* newRev;
                 NSData* json = nil;
+                NSString* docType = nil;
                 BOOL current = NO;
                 if (i==0) {
                     // Hey, this is the leaf revision we're inserting:
@@ -547,6 +556,7 @@
                     json = [self encodeDocumentJSON: rev];
                     if (!json)
                         return kCBLStatusBadJSON;
+                    docType = rev[@"fp_type"];
                     current = YES;
                 } else {
                     // It's an intermediate parent, so insert a stub:
@@ -560,7 +570,8 @@
                                  parentSequence: sequence
                                         current: current 
                                  hasAttachments: (newRev[@"_attachments"] != nil)
-                                           JSON: json];
+                                           JSON: json
+                                        docType:docType];
                 if (sequence <= 0)
                     return self.lastDbError;
 
@@ -586,7 +597,8 @@
 
         // Mark the latest local rev as no longer current:
         if (localParentSequence > 0) {
-            if (![_fmdb executeUpdate: @"UPDATE revs SET current=0 WHERE sequence=?",
+            if (![_fmdb executeUpdate: @"UPDATE revs SET current=0, doc_type=null"
+                                        " WHERE sequence=? AND current!=0",
                   @(localParentSequence)])
                 return self.lastDbError;
         }
@@ -627,7 +639,7 @@
     // Can't delete any rows because that would lose revision tree history.
     // But we can remove the JSON of non-current revisions, which is most of the space.
     LogMY(@"CBLDatabase: Deleting JSON of old revisions...");
-    if (![_fmdb executeUpdate: @"UPDATE revs SET json=null WHERE current=0"])
+    if (![_fmdb executeUpdate: @"UPDATE revs SET json=null, doc_type=null WHERE current=0"])
         return self.lastDbError;
 
     LogMY(@"Deleting old attachments...");
